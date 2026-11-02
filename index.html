@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Bird Cloud - Web Game Điện Toán Đám Mây</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐦</text></svg>">
+</head>
+<body>
+    <header class="header">
+        <h1 class="title">🐦 FLAPPY BIRD CLOUD</h1>
+        <p class="subtitle">GitHub &bull; Vercel &bull; Firebase Firestore Leaderboard</p>
+    </header>
+
+    <main class="game-wrapper">
+        <!-- Bảng điểm & Công cụ -->
+        <div class="score-bar">
+            <div class="controls-bar">
+                <button id="muteBtn" class="btn" title="Bật/Tắt âm thanh (Phím M)">
+                    🔊 <span class="btn-text">Sound</span>
+                </button>
+                <button id="pauseBtn" class="btn" title="Tạm dừng/Tiếp tục (Phím P)">
+                    ⏸️ <span class="btn-text">Pause</span>
+                </button>
+                <button id="themeBtn" class="btn" title="Đổi bầu trời Ngày/Hoàng hôn/Đêm (Phím T)">
+                    🌤️ <span class="btn-text">Theme</span>
+                </button>
+            </div>
+            <div class="score-display">
+                <span id="highScore" class="high-score">HI 00000</span>
+                <span id="currentScore" class="current-score">00000</span>
+            </div>
+        </div>
+
+        <!-- Khung Canvas Game -->
+        <div class="canvas-container" id="gameContainer">
+            <canvas id="gameCanvas" width="1000" height="420"></canvas>
+
+            <!-- Hướng dẫn bắt đầu -->
+            <div id="startPrompt" class="start-prompt">
+                NHẤN SPACE / CLICK CHUỘT ĐỂ VỖ CÁNH BAY
+            </div>
+
+            <!-- Modal Game Over -->
+            <div id="gameOverModal" class="overlay">
+                <div class="game-over-box">
+                    <div class="game-over-title">G A M E &nbsp; O V E R</div>
+                    <div class="game-over-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">ĐIỂM VỪA ĐẠT</span>
+                            <span id="finalScoreText" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">HUY CHƯƠNG</span>
+                            <span id="medalText" class="stat-value">🥉 Đồng</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">KỶ LỤC CÁ NHÂN</span>
+                            <span id="bestScoreText" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <button id="restartBtn" class="btn primary">
+                        🔄 CHƠI LẠI (SPACE / ENTER)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Paused -->
+            <div id="pauseModal" class="overlay">
+                <div class="game-over-box">
+                    <div class="game-over-title">TẠM DỪNG</div>
+                    <button class="btn primary" onclick="window.flappyGame.togglePause()">
+                        ▶️ TIẾP TỤC CHƠI
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nút điều khiển cảm ứng dành cho màn hình điện thoại/tablet -->
+        <div class="mobile-controls">
+            <button id="btnDiveMobile" class="mobile-btn dive-btn">
+                ⬇ LAO NHANH (↓)
+            </button>
+            <button id="btnJumpMobile" class="mobile-btn flap-btn">
+                🪽 VỖ CÁNH BAY (SPACE / ↑)
+            </button>
+        </div>
+
+        <!-- Khu vực Người chơi & Bảng xếp hạng trực tuyến (Database sẵn sàng Firebase) -->
+        <section class="online-leaderboard-section">
+            <!-- Thanh thông tin hồ sơ người chơi -->
+            <div class="player-profile-bar">
+                <div class="profile-info">
+                    <span class="profile-label">PLAYER:</span>
+                    <span id="profilePlayerName" class="profile-name">Loading...</span>
+                    <span class="profile-divider">|</span>
+                    <span class="profile-label">YOUR BEST:</span>
+                    <span id="profilePlayerBest" class="profile-best">00000</span>
+                </div>
+                <button id="editNameBtn" class="btn btn-sm" title="Đổi biệt danh của bạn">
+                    ✏️ <span class="btn-text">Edit name</span>
+                </button>
+            </div>
+
+            <!-- Bảng xếp hạng Top 5 -->
+            <div class="leaderboard-card">
+                <div class="leaderboard-header">
+                    <div class="leaderboard-title">
+                        🏆 TOP 5 ONLINE RANKING (FLAPPY BIRD)
+                    </div>
+                    <div class="leaderboard-actions">
+                        <span class="db-status-badge" id="dbStatusBadge" title="Trạng thái kết nối cơ sở dữ liệu">
+                            <span class="status-dot"></span> <span id="dbStatusText">🔥 Firebase Cloud</span>
+                        </span>
+                        <button id="refreshLeaderboardBtn" class="btn btn-sm" title="Làm mới bảng xếp hạng">
+                            🔄 REFRESH SCORE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tiêu đề cột -->
+                <div class="leaderboard-columns">
+                    <div class="col-rank">RANK</div>
+                    <div class="col-name">PLAYER</div>
+                    <div class="col-score">SCORE</div>
+                </div>
+
+                <!-- Danh sách 5 người điểm cao nhất -->
+                <div id="leaderboardList" class="leaderboard-list">
+                    <!-- Dữ liệu được nạp tự động qua JavaScript -->
+                </div>
+
+                <!-- Thông báo thứ hạng cá nhân -->
+                <div id="playerRankNotice" class="player-rank-notice"></div>
+            </div>
+
+            <!-- Ghi chú điều khiển tinh gọn -->
+            <div class="quick-controls-hint">
+                <span>🎮 <strong>Phím:</strong> [Space / ↑ / W / Click] Vỗ cánh &bull; [↓ / S] Lao nhanh &bull; [P] Tạm dừng &bull; [M] Âm thanh &bull; [T] Đổi nền trời</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Nhập / Sửa tên người chơi khi vào web hoặc bấm sửa tên -->
+    <div id="playerNameModal" class="player-modal-backdrop">
+        <div class="player-modal-box">
+            <div class="modal-icon">🐦</div>
+            <h2 id="nameModalTitle" class="modal-title">NHẬP TÊN PHI CÔNG CHIM</h2>
+            <p id="nameModalSubtitle" class="modal-subtitle">
+                Nhập biệt danh của bạn để lưu điểm kỷ lục và đua Top trên bảng xếp hạng Cloud!
+            </p>
+            <div class="modal-input-group">
+                <input type="text" id="playerNameInput" maxlength="15" placeholder="Ví dụ: Chim Én Vàng" autocomplete="off" spellcheck="false">
+                <span class="input-char-limit">Tối đa 15 ký tự</span>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelNameBtn" class="btn" style="display: none;">HỦY</button>
+                <button type="button" id="saveNameBtn" class="btn primary">LƯU & BAY NGAY</button>
+            </div>
+            <div class="modal-note">
+                🔒 Tên người chơi và điểm số được đồng bộ tự động với Firebase Firestore / LocalStorage.
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Compat version cho web Vanilla giống bài thực hành) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+
+    <!-- Game Scripts -->
+    <script src="js/audio.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/leaderboard.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
